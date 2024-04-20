@@ -32,11 +32,38 @@ type Err struct {
 
 var (
 	personalDeduction = 60000.0
+	kReceiptMax       = 50000.0
+	donationMax       = 100000.0
 )
 
 func calculateTax(totalIncome, wht float64, allowances []Allowance) float64 {
 
 	taxableIncome := totalIncome - personalDeduction
+
+	kReceiptAmount := 0.0
+	donationAmount := 0.0
+	// check k-receipt and donation
+	for _, allowance := range allowances {
+		switch allowance.AllowanceType {
+		case "k-receipt":
+			if allowance.Amount < kReceiptMax {
+				kReceiptAmount = allowance.Amount
+			} else {
+				kReceiptAmount = kReceiptMax
+			}
+
+		case "donation":
+			if allowance.Amount < donationMax {
+				donationAmount = allowance.Amount
+			} else {
+				donationAmount = donationMax
+			}
+		}
+	}
+
+	// deduct k-receipt and donation
+	taxableIncome -= kReceiptAmount
+	taxableIncome -= donationAmount
 
 	tax := 0.0
 	switch {
