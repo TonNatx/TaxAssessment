@@ -52,6 +52,8 @@ func calculateTax(totalIncome, wht float64, allowances []Allowance) float64 {
 		tax = (500000-150000)*0.1 + (1000000-500000)*0.15 + (2000000-1000000)*0.2 + (taxableIncome-2000000)*0.35
 	}
 
+	tax -= wht
+
 	return tax
 }
 
