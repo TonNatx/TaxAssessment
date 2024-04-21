@@ -34,19 +34,27 @@ type TaxResponse struct {
 	TaxLevels []TaxLevel `json:"taxlevel"`
 }
 
+type DeductionRequest struct {
+	Amount float64 `json:"amount"`
+}
+
+type DeductionResponse struct {
+	PersonalDeduction float64 `json:"personalDeduction"`
+}
+
 type Err struct {
 	Message string `json:"message"`
 }
 
 var (
-	personalDeduction = 60000.0
-	kReceiptMax       = 50000.0
-	donationMax       = 100000.0
+	normalPersonalDeduction = 60000.0
+	kReceiptMax             = 50000.0
+	donationMax             = 100000.0
 )
 
 func calculateTax(totalIncome, wht float64, allowances []Allowance) (float64, []TaxLevel) {
 
-	taxableIncome := totalIncome - personalDeduction
+	taxableIncome := totalIncome - normalPersonalDeduction
 
 	kReceiptAmount := 0.0
 	donationAmount := 0.0
@@ -132,7 +140,21 @@ func calculateTaxHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, res)
 }
 
+func personalDeductionHandler(c echo.Context) error {
+	var p DeductionRequest
+	err := c.Bind(&p)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, Err{Message: err.Error()})
+	}
+
+	res := DeductionResponse{PersonalDeduction: p.Amount}
+
+	return c.JSON(http.StatusOK, res)
+}
+
 func main() {
+	os.Setenv("ADMIN_USERNAME", "adminTax")
+	os.Setenv("ADMIN_PASSWORD", "admin!")
 	e := echo.New()
 	e.GET("/", func(c echo.Context) error {
 		return c.String(http.StatusOK, "Hello, Go Bootcamp!")
@@ -147,6 +169,7 @@ func main() {
 		}
 		return false, nil
 	}))
+	g.POST("/deductions/personal", personalDeductionHandler)
 
 	// Start server
 	go func() {
