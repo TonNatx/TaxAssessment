@@ -3,12 +3,14 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/labstack/echo/v4"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 )
 
 type TaxRequest struct {
@@ -136,6 +138,16 @@ func main() {
 		return c.String(http.StatusOK, "Hello, Go Bootcamp!")
 	})
 	e.POST("/tax/calculation", calculateTaxHandler)
+
+	g := e.Group("/admin")
+	g.Use(middleware.BasicAuth(func(username, password string, c echo.Context) (bool, error) {
+
+		if username == os.Getenv("ADMIN_USERNAME") && password == os.Getenv("ADMIN_PASSWORD") {
+			return true, nil
+		}
+		return false, nil
+	}))
+
 	// Start server
 	go func() {
 		if err := e.Start(":1323"); err != nil && err != http.ErrServerClosed {
