@@ -22,8 +22,14 @@ type Allowance struct {
 	Amount        float64 `json:"amount"`
 }
 
+type TaxLevel struct {
+	Level string  `json:"level"`
+	Tax   float64 `json:"tax"`
+}
+
 type TaxResponse struct {
-	Tax float64 `json:"tax"`
+	Tax       float64    `json:"tax"`
+	TaxLevels []TaxLevel `json:"taxlevel"`
 }
 
 type Err struct {
@@ -36,7 +42,7 @@ var (
 	donationMax       = 100000.0
 )
 
-func calculateTax(totalIncome, wht float64, allowances []Allowance) float64 {
+func calculateTax(totalIncome, wht float64, allowances []Allowance) (float64, []TaxLevel) {
 
 	taxableIncome := totalIncome - personalDeduction
 
@@ -65,23 +71,50 @@ func calculateTax(totalIncome, wht float64, allowances []Allowance) float64 {
 	taxableIncome -= kReceiptAmount
 	taxableIncome -= donationAmount
 
+	taxLevels := []TaxLevel{
+		{Level: "0-150,000", Tax: 0.0},
+		{Level: "150,001-500,000", Tax: 0.0},
+		{Level: "500,001-1,000,000", Tax: 0.0},
+		{Level: "1,000,001-2,000,000", Tax: 0.0},
+		{Level: "2,000,001 ขึ้นไป", Tax: 0.0},
+	}
+
 	tax := 0.0
 	switch {
 	case taxableIncome <= 150000:
 		tax = 0.0
 	case taxableIncome > 150000 && taxableIncome <= 500000:
 		tax = (taxableIncome - 150000) * 0.1
+		taxLevels[1].Tax = tax
 	case taxableIncome > 500000 && taxableIncome <= 1000000:
-		tax = (500000-150000)*0.1 + (taxableIncome-500000)*0.15
+		taxLevel_2 := (500000 - 150000) * 0.1
+		taxLevels[1].Tax = taxLevel_2
+		taxLevel_3 := (taxableIncome - 500000) * 0.15
+		taxLevels[2].Tax = taxLevel_3
+		tax = taxLevel_2 + taxLevel_3
 	case taxableIncome > 1000000 && taxableIncome <= 2000000:
-		tax = (500000-150000)*0.1 + (1000000-500000)*0.15 + (taxableIncome-1000000)*0.2
+		taxLevel_2 := (500000 - 150000) * 0.1
+		taxLevels[1].Tax = taxLevel_2
+		taxLevel_3 := (taxableIncome - 500000) * 0.15
+		taxLevels[2].Tax = taxLevel_3
+		taxLevel_4 := (taxableIncome - 1000000) * 0.2
+		taxLevels[3].Tax = taxLevel_4
+		tax = taxLevel_2 + taxLevel_3 + taxLevel_4
 	default:
-		tax = (500000-150000)*0.1 + (1000000-500000)*0.15 + (2000000-1000000)*0.2 + (taxableIncome-2000000)*0.35
+		taxLevel_2 := (500000 - 150000) * 0.1
+		taxLevels[1].Tax = taxLevel_2
+		taxLevel_3 := (taxableIncome - 500000) * 0.15
+		taxLevels[2].Tax = taxLevel_3
+		taxLevel_4 := (taxableIncome - 1000000) * 0.2
+		taxLevels[3].Tax = taxLevel_4
+		taxLevel_5 := (taxableIncome - 2000000) * 0.35
+		taxLevels[4].Tax = taxLevel_5
+		tax = taxLevel_2 + taxLevel_3 + taxLevel_4 + taxLevel_5
 	}
 
 	tax -= wht
 
-	return tax
+	return tax, taxLevels
 }
 
 func calculateTaxHandler(c echo.Context) error {
@@ -91,8 +124,8 @@ func calculateTaxHandler(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, Err{Message: err.Error()})
 	}
 
-	tax := calculateTax(t.TotalIncome, t.WHT, t.Allowances)
-	res := TaxResponse{Tax: tax}
+	tax, taxLevels := calculateTax(t.TotalIncome, t.WHT, t.Allowances)
+	res := TaxResponse{Tax: tax, TaxLevels: taxLevels}
 
 	return c.JSON(http.StatusOK, res)
 }
