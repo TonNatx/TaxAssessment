@@ -2,10 +2,13 @@ package main
 
 import (
 	"context"
+	"encoding/csv"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -19,6 +22,11 @@ type TaxRequest struct {
 	Allowances  []Allowance `json:"allowances"`
 }
 
+type TaxResponse struct {
+	Tax       float64    `json:"tax"`
+	TaxLevels []TaxLevel `json:"taxlevel"`
+}
+
 type Allowance struct {
 	AllowanceType string  `json:"allowanceType"`
 	Amount        float64 `json:"amount"`
@@ -29,9 +37,13 @@ type TaxLevel struct {
 	Tax   float64 `json:"tax"`
 }
 
-type TaxResponse struct {
-	Tax       float64    `json:"tax"`
-	TaxLevels []TaxLevel `json:"taxlevel"`
+type TaxRecord struct {
+	TotalIncome float64 `json:"totalIncome"`
+	Tax         float64 `json:"tax"`
+}
+
+type TaxResponseCSV struct {
+	Taxes []TaxRecord `json:"taxes"`
 }
 
 type DeductionRequest struct {
@@ -140,6 +152,71 @@ func calculateTaxHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, res)
 }
 
+func uploadCSVHandler(c echo.Context) error {
+	// Get uploaded file
+	file, err := c.FormFile("taxFile")
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, Err{Message: err.Error()})
+	}
+	// Open the uploaded file
+	src, err := file.Open()
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, Err{Message: err.Error()})
+	}
+	defer src.Close()
+	// Create a CSV reader
+	reader := csv.NewReader(src)
+	// Read the header row
+	header, err := reader.Read()
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, Err{Message: "Failed to read CSV header"})
+	}
+
+	// Check if the header matches the expected format
+	expectedHeader := []string{"totalIncome", "wht", "donation"}
+	for i, col := range header {
+		if col != expectedHeader[i] {
+			return c.JSON(http.StatusBadRequest, Err{Message: "Invalid CSV header format"})
+		}
+	}
+
+	// Read and process CSV records
+	var taxes []TaxRecord
+	for {
+		record, err := reader.Read()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, Err{Message: err.Error()})
+		}
+
+		// Convert CSV data to float64
+		totalIncome, err := strconv.ParseFloat(record[0], 64)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, Err{Message: "Invalid totalIncome format"})
+		}
+		wht, err := strconv.ParseFloat(record[1], 64)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, Err{Message: "Invalid WHT format"})
+		}
+		donation, err := strconv.ParseFloat(record[2], 64)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, Err{Message: "Invalid donation format"})
+		}
+
+		// Perform tax calculation
+		allowances := []Allowance{{AllowanceType: "donation", Amount: donation}}
+		tax, _ := calculateTax(totalIncome, wht, allowances)
+		taxRecord := TaxRecord{TotalIncome: totalIncome, Tax: tax}
+		taxes = append(taxes, taxRecord)
+	}
+
+	res := TaxResponseCSV{Taxes: taxes}
+
+	return c.JSON(http.StatusOK, res)
+}
+
 func personalDeductionHandler(c echo.Context) error {
 	var p DeductionRequest
 	err := c.Bind(&p)
@@ -159,7 +236,8 @@ func main() {
 	e.GET("/", func(c echo.Context) error {
 		return c.String(http.StatusOK, "Hello, Go Bootcamp!")
 	})
-	e.POST("/tax/calculation", calculateTaxHandler)
+	e.POST("/tax/calculations", calculateTaxHandler)
+	e.POST("/tax/calculations/upload-csv", uploadCSVHandler)
 
 	g := e.Group("/admin")
 	g.Use(middleware.BasicAuth(func(username, password string, c echo.Context) (bool, error) {
