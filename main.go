@@ -46,8 +46,13 @@ type TaxRecord struct {
 	Tax         float64 `json:"tax"`
 }
 
+type TaxRecordRefund struct {
+	TotalIncome float64 `json:"totalIncome"`
+	TaxRefund   float64 `json:"taxRefund"`
+}
+
 type TaxResponseCSV struct {
-	Taxes []TaxRecord `json:"taxes"`
+	Taxes []interface{} `json:"taxes"`
 }
 
 type DeductionRequest struct {
@@ -197,7 +202,7 @@ func uploadCSVHandler(c echo.Context) error {
 	}
 
 	// Read and process CSV records
-	var taxes []TaxRecord
+	var taxes []interface{}
 	for {
 		record, err := reader.Read()
 		if err == io.EOF {
@@ -224,8 +229,13 @@ func uploadCSVHandler(c echo.Context) error {
 		// Perform tax calculation
 		allowances := []Allowance{{AllowanceType: "donation", Amount: donation}}
 		tax, _ := calculateTax(totalIncome, wht, allowances)
-		taxRecord := TaxRecord{TotalIncome: totalIncome, Tax: tax}
-		taxes = append(taxes, taxRecord)
+		if tax < 0 {
+			refundRecord := TaxRecordRefund{TotalIncome: totalIncome, TaxRefund: -tax}
+			taxes = append(taxes, refundRecord)
+		} else {
+			normalRecord := TaxRecord{TotalIncome: totalIncome, Tax: tax}
+			taxes = append(taxes, normalRecord)
+		}
 	}
 
 	res := TaxResponseCSV{Taxes: taxes}
