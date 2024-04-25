@@ -67,14 +67,16 @@ type Err struct {
 }
 
 var (
-	normalPersonalDeduction = 60000.0
+
+	initialPersonalDeduction = 60000.0
 	initialKReceipt         = 50000.0
 	donationMax             = 100000.0
+
 )
 
 func calculateTax(totalIncome, wht float64, allowances []Allowance) (float64, []TaxLevel) {
 
-	taxableIncome := totalIncome - normalPersonalDeduction
+	taxableIncome := totalIncome - initialPersonalDeduction
 
 	kReceiptAmount := 0.0
 	donationAmount := 0.0
@@ -226,13 +228,19 @@ func uploadCSVHandler(c echo.Context) error {
 }
 
 func personalDeductionHandler(c echo.Context) error {
-	var p DeductionRequest
-	err := c.Bind(&p)
+	var req DeductionRequest
+	err := c.Bind(&req)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, Err{Message: err.Error()})
 	}
 
-	res := DeductionResponse{PersonalDeduction: p.Amount}
+	if req.Amount < 10000 {
+		return c.JSON(http.StatusBadRequest, Err{Message: "personalDeduction amount must be greater than or equal to 10,000"})
+	}
+
+	initialPersonalDeduction = req.Amount
+
+	res := DeductionResponse{PersonalDeduction: initialPersonalDeduction}
 
 	return c.JSON(http.StatusOK, res)
 }
