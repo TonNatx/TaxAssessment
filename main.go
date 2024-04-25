@@ -54,13 +54,21 @@ type DeductionResponse struct {
 	PersonalDeduction float64 `json:"personalDeduction"`
 }
 
+type KReceiptRequest struct {
+	Amount float64 `json:"amount"`
+}
+
+type KReceiptResepond struct {
+	KReceipt float64 `json:"kReceipt"`
+}
+
 type Err struct {
 	Message string `json:"message"`
 }
 
 var (
 	normalPersonalDeduction = 60000.0
-	kReceiptMax             = 50000.0
+	initialKReceipt         = 50000.0
 	donationMax             = 100000.0
 )
 
@@ -74,10 +82,10 @@ func calculateTax(totalIncome, wht float64, allowances []Allowance) (float64, []
 	for _, allowance := range allowances {
 		switch allowance.AllowanceType {
 		case "k-receipt":
-			if allowance.Amount < kReceiptMax {
+			if allowance.Amount < initialKReceipt {
 				kReceiptAmount = allowance.Amount
 			} else {
-				kReceiptAmount = kReceiptMax
+				kReceiptAmount = initialKReceipt
 			}
 
 		case "donation":
@@ -229,6 +237,24 @@ func personalDeductionHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, res)
 }
 
+func kReceiptHandler(c echo.Context) error {
+	var req KReceiptRequest
+	err := c.Bind(&req)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, Err{Message: err.Error()})
+	}
+
+	if req.Amount < 0 {
+		return c.JSON(http.StatusBadRequest, Err{Message: "kReceipt amount must be greater than or equal to 0"})
+	}
+
+	initialKReceipt = req.Amount
+
+	res := KReceiptResepond{KReceipt: initialKReceipt}
+
+	return c.JSON(http.StatusOK, res)
+}
+
 func main() {
 	os.Setenv("ADMIN_USERNAME", "adminTax")
 	os.Setenv("ADMIN_PASSWORD", "admin!")
@@ -248,7 +274,7 @@ func main() {
 		return false, nil
 	}))
 	g.POST("/deductions/personal", personalDeductionHandler)
-
+	g.POST("/deductions/k-receipt", kReceiptHandler)
 	// Start server
 	go func() {
 		if err := e.Start(":1323"); err != nil && err != http.ErrServerClosed {
