@@ -26,6 +26,10 @@ type TaxResponse struct {
 	Tax       float64    `json:"tax"`
 	TaxLevels []TaxLevel `json:"taxlevel"`
 }
+type TaxRefundRespond struct {
+	TaxRefund float64    `json:"taxRefund"`
+	TaxLevels []TaxLevel `json:"taxlevel"`
+}
 
 type Allowance struct {
 	AllowanceType string  `json:"allowanceType"`
@@ -67,11 +71,9 @@ type Err struct {
 }
 
 var (
-
 	initialPersonalDeduction = 60000.0
-	initialKReceipt         = 50000.0
-	donationMax             = 100000.0
-
+	initialKReceipt          = 50000.0
+	donationMax              = 100000.0
 )
 
 func calculateTax(totalIncome, wht float64, allowances []Allowance) (float64, []TaxLevel) {
@@ -157,9 +159,13 @@ func calculateTaxHandler(c echo.Context) error {
 	}
 
 	tax, taxLevels := calculateTax(t.TotalIncome, t.WHT, t.Allowances)
-	res := TaxResponse{Tax: tax, TaxLevels: taxLevels}
-
-	return c.JSON(http.StatusOK, res)
+	if tax < 0 {
+		res := TaxRefundRespond{TaxRefund: -tax, TaxLevels: taxLevels}
+		return c.JSON(http.StatusOK, res)
+	} else {
+		res := TaxResponse{Tax: tax, TaxLevels: taxLevels}
+		return c.JSON(http.StatusOK, res)
+	}
 }
 
 func uploadCSVHandler(c echo.Context) error {
