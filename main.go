@@ -283,9 +283,7 @@ func main() {
 	os.Setenv("ADMIN_USERNAME", "adminTax")
 	os.Setenv("ADMIN_PASSWORD", "admin!")
 	e := echo.New()
-	e.GET("/", func(c echo.Context) error {
-		return c.String(http.StatusOK, "Hello, Go Bootcamp!")
-	})
+
 	e.POST("/tax/calculations", calculateTaxHandler)
 	e.POST("/tax/calculations/upload-csv", uploadCSVHandler)
 
@@ -301,7 +299,7 @@ func main() {
 	g.POST("/deductions/k-receipt", kReceiptHandler)
 	// Start server
 	go func() {
-		if err := e.Start(":1323"); err != nil && err != http.ErrServerClosed {
+		if err := e.Start(":8080"); err != nil && err != http.ErrServerClosed {
 			e.Logger.Fatal("shutting down the server")
 		}
 	}()
