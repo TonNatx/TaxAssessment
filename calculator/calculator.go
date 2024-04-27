@@ -1,5 +1,7 @@
 package calculator
 
+import "errors"
+
 type Allowance struct {
 	AllowanceType string  `json:"allowanceType"`
 	Amount        float64 `json:"amount"`
@@ -16,8 +18,10 @@ var (
 	donationMax              = 100000.0
 )
 
-func CalculateTax(totalIncome, wht float64, allowances []Allowance) (float64, []TaxLevel) {
-
+func CalculateTax(totalIncome, wht float64, allowances []Allowance) (float64, []TaxLevel, error) {
+	if wht < 0 || wht > totalIncome {
+		return 0, nil, errors.New("wht must be between 0 and totalIncome")
+	}
 	taxableIncome := totalIncome - InitialPersonalDeduction
 
 	kReceiptAmount := 0.0
@@ -26,14 +30,18 @@ func CalculateTax(totalIncome, wht float64, allowances []Allowance) (float64, []
 	for _, allowance := range allowances {
 		switch allowance.AllowanceType {
 		case "k-receipt":
-			if allowance.Amount < InitialKReceipt {
+			if allowance.Amount < 0 {
+				return 0, nil, errors.New("kReceiptAmount must be greater than 0")
+			} else if allowance.Amount < InitialKReceipt {
 				kReceiptAmount = allowance.Amount
 			} else {
 				kReceiptAmount = InitialKReceipt
 			}
 
 		case "donation":
-			if allowance.Amount < donationMax {
+			if allowance.Amount < 0 {
+				return 0, nil, errors.New("donation must be greater than 0")
+			} else if allowance.Amount < donationMax {
 				donationAmount = allowance.Amount
 			} else {
 				donationAmount = donationMax
@@ -88,5 +96,5 @@ func CalculateTax(totalIncome, wht float64, allowances []Allowance) (float64, []
 
 	tax -= wht
 
-	return tax, taxLevels
+	return tax, taxLevels, nil
 }

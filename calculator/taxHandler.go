@@ -31,7 +31,11 @@ func CalculateTaxHandler(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, Err{Message: err.Error()})
 	}
 
-	tax, taxLevels := CalculateTax(t.TotalIncome, t.WHT, t.Allowances)
+	tax, taxLevels, err := CalculateTax(t.TotalIncome, t.WHT, t.Allowances)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, Err{Message: err.Error()})
+	}
+
 	if tax < 0 {
 		res := TaxRefundRespond{TaxRefund: -tax, TaxLevels: taxLevels}
 		return c.JSON(http.StatusOK, res)

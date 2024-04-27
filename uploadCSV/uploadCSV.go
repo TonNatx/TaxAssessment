@@ -82,7 +82,10 @@ func UploadCSVHandler(c echo.Context) error {
 
 		// Perform tax calculation
 		allowances := []calculator.Allowance{{AllowanceType: "donation", Amount: donation}}
-		tax, _ := calculator.CalculateTax(totalIncome, wht, allowances)
+		tax, _, err := calculator.CalculateTax(totalIncome, wht, allowances)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, Err{Message: err.Error()})
+		}
 		if tax < 0 {
 			refundRecord := TaxRecordRefund{TotalIncome: totalIncome, TaxRefund: -tax}
 			taxes = append(taxes, refundRecord)
