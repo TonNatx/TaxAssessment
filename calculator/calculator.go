@@ -11,14 +11,14 @@ type TaxLevel struct {
 }
 
 var (
-	initialPersonalDeduction = 60000.0
-	initialKReceipt          = 50000.0
+	InitialPersonalDeduction = 60000.0
+	InitialKReceipt          = 50000.0
 	donationMax              = 100000.0
 )
 
 func CalculateTax(totalIncome, wht float64, allowances []Allowance) (float64, []TaxLevel) {
 
-	taxableIncome := totalIncome - initialPersonalDeduction
+	taxableIncome := totalIncome - InitialPersonalDeduction
 
 	kReceiptAmount := 0.0
 	donationAmount := 0.0
@@ -26,10 +26,10 @@ func CalculateTax(totalIncome, wht float64, allowances []Allowance) (float64, []
 	for _, allowance := range allowances {
 		switch allowance.AllowanceType {
 		case "k-receipt":
-			if allowance.Amount < initialKReceipt {
+			if allowance.Amount < InitialKReceipt {
 				kReceiptAmount = allowance.Amount
 			} else {
-				kReceiptAmount = initialKReceipt
+				kReceiptAmount = InitialKReceipt
 			}
 
 		case "donation":
