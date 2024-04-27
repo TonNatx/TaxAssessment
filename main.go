@@ -5,6 +5,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -12,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
@@ -280,8 +282,11 @@ func kReceiptHandler(c echo.Context) error {
 }
 
 func main() {
-	os.Setenv("ADMIN_USERNAME", "adminTax")
-	os.Setenv("ADMIN_PASSWORD", "admin!")
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal(".env file couldn't be load")
+	}
+
 	e := echo.New()
 
 	e.POST("/tax/calculations", calculateTaxHandler)
