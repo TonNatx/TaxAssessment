@@ -19,8 +19,22 @@ var (
 )
 
 func CalculateTax(totalIncome, wht float64, allowances []Allowance) (float64, []TaxLevel, error) {
-	if wht < 0 || wht > totalIncome {
-		return 0, nil, errors.New("wht must be between 0 and totalIncome")
+	taxLevels := []TaxLevel{
+		{Level: "0-150,000", Tax: 0.0},
+		{Level: "150,001-500,000", Tax: 0.0},
+		{Level: "500,001-1,000,000", Tax: 0.0},
+		{Level: "1,000,001-2,000,000", Tax: 0.0},
+		{Level: "2,000,001 ขึ้นไป", Tax: 0.0},
+	}
+
+	if wht < 0.0 || wht > totalIncome {
+		return 0.0, nil, errors.New("wht must be between 0 and totalIncome")
+	}
+	if totalIncome < 0.0 {
+		return 0.0, nil, errors.New("TotalIncome must be greater than 0")
+	}
+	if totalIncome == 0.0 {
+		return 0.0, taxLevels, nil
 	}
 	taxableIncome := totalIncome - InitialPersonalDeduction
 
@@ -31,7 +45,7 @@ func CalculateTax(totalIncome, wht float64, allowances []Allowance) (float64, []
 		switch allowance.AllowanceType {
 		case "k-receipt":
 			if allowance.Amount < 0 {
-				return 0, nil, errors.New("kReceiptAmount must be greater than 0")
+				return 0.0, nil, errors.New("kReceiptAmount must be greater than 0")
 			} else if allowance.Amount < InitialKReceipt {
 				kReceiptAmount = allowance.Amount
 			} else {
@@ -40,7 +54,7 @@ func CalculateTax(totalIncome, wht float64, allowances []Allowance) (float64, []
 
 		case "donation":
 			if allowance.Amount < 0 {
-				return 0, nil, errors.New("donation must be greater than 0")
+				return 0.0, nil, errors.New("donation must be greater than 0")
 			} else if allowance.Amount < donationMax {
 				donationAmount = allowance.Amount
 			} else {
@@ -53,43 +67,35 @@ func CalculateTax(totalIncome, wht float64, allowances []Allowance) (float64, []
 	taxableIncome -= kReceiptAmount
 	taxableIncome -= donationAmount
 
-	taxLevels := []TaxLevel{
-		{Level: "0-150,000", Tax: 0.0},
-		{Level: "150,001-500,000", Tax: 0.0},
-		{Level: "500,001-1,000,000", Tax: 0.0},
-		{Level: "1,000,001-2,000,000", Tax: 0.0},
-		{Level: "2,000,001 ขึ้นไป", Tax: 0.0},
-	}
-
 	tax := 0.0
-	switch {
-	case taxableIncome <= 150000:
+
+	if taxableIncome <= 150000.0 {
 		tax = 0.0
-	case taxableIncome > 150000 && taxableIncome <= 500000:
-		tax = (taxableIncome - 150000) * 0.1
+	} else if taxableIncome <= 500000.0 {
+		tax = (taxableIncome - 150000.0) * 0.1
 		taxLevels[1].Tax = tax
-	case taxableIncome > 500000 && taxableIncome <= 1000000:
-		taxLevel_2 := (500000 - 150000) * 0.1
+	} else if taxableIncome <= 1000000.0 {
+		taxLevel_2 := (500000.0 - 150000.0) * 0.1
 		taxLevels[1].Tax = taxLevel_2
-		taxLevel_3 := (taxableIncome - 500000) * 0.15
+		taxLevel_3 := (taxableIncome - 500000.0) * 0.15
 		taxLevels[2].Tax = taxLevel_3
 		tax = taxLevel_2 + taxLevel_3
-	case taxableIncome > 1000000 && taxableIncome <= 2000000:
-		taxLevel_2 := (500000 - 150000) * 0.1
+	} else if taxableIncome <= 2000000.0 {
+		taxLevel_2 := (500000.0 - 150000.0) * 0.1
 		taxLevels[1].Tax = taxLevel_2
-		taxLevel_3 := (taxableIncome - 500000) * 0.15
+		taxLevel_3 := (1000000.0 - 500000.0) * 0.15
 		taxLevels[2].Tax = taxLevel_3
-		taxLevel_4 := (taxableIncome - 1000000) * 0.2
+		taxLevel_4 := (taxableIncome - 1000000.0) * 0.2
 		taxLevels[3].Tax = taxLevel_4
 		tax = taxLevel_2 + taxLevel_3 + taxLevel_4
-	default:
-		taxLevel_2 := (500000 - 150000) * 0.1
+	} else {
+		taxLevel_2 := (500000.0 - 150000.0) * 0.1
 		taxLevels[1].Tax = taxLevel_2
-		taxLevel_3 := (taxableIncome - 500000) * 0.15
+		taxLevel_3 := (1000000.0 - 500000.0) * 0.15
 		taxLevels[2].Tax = taxLevel_3
-		taxLevel_4 := (taxableIncome - 1000000) * 0.2
+		taxLevel_4 := (2000000.0 - 1000000.0) * 0.2
 		taxLevels[3].Tax = taxLevel_4
-		taxLevel_5 := (taxableIncome - 2000000) * 0.35
+		taxLevel_5 := (taxableIncome - 2000000.0) * 0.35
 		taxLevels[4].Tax = taxLevel_5
 		tax = taxLevel_2 + taxLevel_3 + taxLevel_4 + taxLevel_5
 	}
