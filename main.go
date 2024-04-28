@@ -3,15 +3,14 @@ package main
 import (
 	"context"
 
-	"fmt"
-
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 
+	"fmt"
 	"github.com/TonRat/assessment-tax/admin"
-	"github.com/TonRat/assessment-tax/calculator"
+	"github.com/TonRat/assessment-tax/taxHandler"
 	"github.com/TonRat/assessment-tax/uploadCSV"
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
@@ -28,7 +27,7 @@ func main() {
 
 	e := echo.New()
 
-	e.POST("/tax/calculations", calculator.CalculateTaxHandler)
+	e.POST("/tax/calculations", taxHandler.CalculateTaxHandler)
 	e.POST("/tax/calculations/upload-csv", uploadcsv.UploadCSVHandler)
 
 	g := e.Group("/admin")
@@ -43,7 +42,7 @@ func main() {
 	g.POST("/deductions/k-receipt", admin.KReceiptHandler)
 	// Start server
 	go func() {
-		if err := e.Start(":8080"); err != nil && err != http.ErrServerClosed {
+		if err := e.Start(":" + os.Getenv("PORT")); err != nil && err != http.ErrServerClosed {
 			e.Logger.Fatal("shutting down the server")
 		}
 	}()
